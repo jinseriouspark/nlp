@@ -48,3 +48,42 @@ m = Y.shape[1] # window_size 에 속한 단어 갯수
 # Y 를 원핫인코딩으로 변형
 Y_one_hot = np.zeros((vocab_size, m)) # id_to_word 에 포함된 단어 x Y 길
 
+# 지금까지 단어 전처리를 진행
+# 이제는 가중치를 초기화 하고 순전파 역전파를 준비하면서, 손실계산을 한 뒤 gradient업데이트까지 진행해야 한다
+# 우선 문장 1개 = 단어 x 임베딩 차원으로 변환하는 것이 필요
+
+def initialize_wrd_emb(vocab_size, emb_size):
+    """
+    vocab_size : 학습하고자 하는 데이터나 코퍼스 내 단어 갯수
+    emb_size : 초기 단어 임베딩 데이터. 각 단어를 몇개의 차원으로 임베딩할 것인지 정해야 함
+    """
+    wrd_emb = np.random.randn(vocab_size, emb_size) * 0.01
+    return wrd_emb
+
+def initialize_dense(input_size, output_size):
+    """
+    :param input_size: dense_layer 의 input 크기
+    :param output_size: dense_layer 의 ouput 크기
+    :return: 가중치 행렬
+    """
+    W = np.random.randn(output_size, input_size) * 0.01
+    return W
+
+def initalize_parameters(vocab_size, emb_size):
+    """
+    :param vocab_size: 파라미터 학습에 필요한 단어 크기
+    :param emb_size: 파라미터 학습에 필요한 임베딩 사이즈 크기
+    :return: 파라미터
+    """
+    wrd_emb = initialize_wrd_emb(vocab_size, emb_size)
+    W = initialize_dense(emb_size, vocab_size)
+
+    parameters = {} # 파라미터를 받을 사전 하나 준비
+    parameters['wrd_emb'] = wrd_emb # 사전에는 워드 임베딩 정보와
+    parameters['W'] = W # 가중치 정보를 넣어둠
+    return parameters
+
+# 방법
+## 문장 1개가 들어오면 임베딩 차원만큼 열을 만들어 단어 행렬을 만듦
+## 그리고 은닉층(여기에서는 dense layer) 에 넣은 후
+## 활성함수 중 softmax 함수를 사용하여 결과물을 만
