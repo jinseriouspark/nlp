@@ -86,4 +86,61 @@ def initalize_parameters(vocab_size, emb_size):
 # 방법
 ## 문장 1개가 들어오면 임베딩 차원만큼 열을 만들어 단어 행렬을 만듦
 ## 그리고 은닉층(여기에서는 dense layer) 에 넣은 후
-## 활성함수 중 softmax 함수를 사용하여 결과물을 만
+## 활성함수 중 softmax 함수를 사용하여 결과물을 만들게 된다
+
+
+def ind_to_word_vecs(inds, parameters):
+    '''
+    :param inds: 넘파이 배열이고 1x m 크기
+    :param parameters: 딕셔너리 형태 학습된 가중치 저장소
+    :return:
+    '''
+    m = inds.shape[1]
+    wrd_emb = parameters['wrd_emb']
+    word_vec = wrd_emb[inds.flatten(), :]. T
+    assert(word_vec.shape == (wrd_emb.shape[1], m))
+    # assert() 는 맞을 때 정상적으로 동작 틀리면 assertion error 가 발생한다
+    return word_vec
+
+def linear_dense(word_vec, parameters):
+    """
+    :param word_vec: 임베딩 사이즈 x m
+    :param parameters: 사전형, 학습된 가중치 저장
+    :return:
+    """
+    m = word_vec.shape[1]
+    w = parameters['w']
+    z = np.dot(w, word_vec)
+
+    return w, z
+
+def softmax(z):
+    """
+    :param z: dense layer 의 결과물 vocab_size , m 으로 구성
+    :return:
+    """
+    softmax_out = np.divide(np.exp(z), np.sum(np.exp(x), axis = 0, keepdims = True) + 0.001)
+    return softmax_out
+
+def forward_propagation(inds, parameters):
+    word_vec = ind_to_word_vecs(inds, parameters)
+    w, z = linear_dense(word_vec, parameters)
+    softmax_out = softmax(z)
+
+    caches = {}
+    caches['inds'] = inds
+    caches['word_vec'] = word_vec
+    caches['w'] = w
+    caches['z'] = z
+    return softmax_out, caches
+
+def cross_entropy(softmax_out, y):
+    """
+    :param softmax_out: 소프트 맥스 결과물, vocab_size, m
+    :param y:
+    :return:
+    """
+    m = softmax_out.shape[1]
+    cost = -(1/m) * np.sum(np.sum(y * np.log(softmax_out + 0.001), \
+                                  axis = 0,keepdims=True ),axis = 1 )
+    return cost
