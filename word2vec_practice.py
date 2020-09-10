@@ -144,3 +144,31 @@ def cross_entropy(softmax_out, y):
     cost = -(1/m) * np.sum(np.sum(y * np.log(softmax_out + 0.001), \
                                   axis = 0,keepdims=True ),axis = 1 )
     return cost
+
+# 역천파 과정에서 각각의 손실함수가 반영된 학습가능한 가중치의 gradient 를 계산하고자 하고
+# 그 그라디언트로 가중치를 업데이트 할 것이다
+# 내적이 된 것들은 (아마) 역행렬을 곱하게 되고
+# 더해진 것들은 그대로 타인이 반영이 되고 그럴텐데, 정확하게 코드를 통해 다시 확인해보자
+
+def softmax_backward(Y, softmax_out):
+    '''
+    :param Y: 학습 데이터의 라벨 vocab_size x m
+    :param softmax_out: 소프트맥스 결과물
+    :return:
+    '''
+    dl_dz = softmax_out - Y # 예측 결과 - 실제 결과
+    return dl_dz
+
+def dense_backward(dl_dz, caches):
+    """
+    :param dl_dz: vocab_size x m 크기로 생김
+    :param caches: 사전형태. 순전파의 각 단계 결과들
+    :return:
+    """
+    w = caches['w']
+    word_vec = caches['word_vec']
+    m = word_vec.shape[1]
+
+    dl_dw = (1 / m) * np.dot(dl_dz, word_vec.T)
+    # 역전파는 역행렬을 내적한 뒤 평균(1/m) 을 낸다
+
