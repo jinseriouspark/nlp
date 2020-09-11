@@ -171,4 +171,72 @@ def dense_backward(dl_dz, caches):
 
     dl_dw = (1 / m) * np.dot(dl_dz, word_vec.T)
     # 역전파는 역행렬을 내적한 뒤 평균(1/m) 을 낸다
+    dl_dword_vec = np.dot(w.T, dl_dz)
+    return dl_dw, dl_dword_vec
 
+def backward_propagation(Y, softmax_out, caches):
+    dl_dz = softmax_backward(Y, softmax_out)
+    dl_dw, dl_dword_vec = dense_backward(dl_dz, caches)
+    gradients = dict()
+    gradients['dl_dz'] = dl_dz
+    gradients['dl_dw'] = dl_dw
+    gradients['dl_dword_vec'] = dl_dword_vec
+
+    return gradients
+
+def update_parameters(parameters, caches, gradients, learning_rate):
+    vocab_size, emb_size = parameters['wrd_emb'].shape
+    inds = caches['inds']
+    wrd_emb = parameters['wrd_emb']
+    dl_dword_vec = gradients['dl_dword_vec']
+    m = inds.shape[-1]
+
+    wrd_emb[inds.flatten(), :] -= dl_dword_vec.T * learning_rate
+    parameters['w'] -= learning_rate *gradients['dl_dw']
+
+# 모델 학습을 위해서 순, 역전파
+# 스킵그램 모듈
+
+def skipgram_model_training(X, Y, vocab_size, emb_size, learning_rate, epochs, batch_size=256, parameters=None,
+                            print_cost=True, plot_cost=True):
+    """
+    X: Input word indices. shape: (1, m)
+    Y: 원핫인코딩된 결과. shape: (vocab_size, m)
+    vocab_size: 학습 시 단어
+    emb_size: 임베딩 크
+    learning_rate: 학습률
+    epochs: 에폭 (학습 몇 번 반복할 것인가)
+    batch_size: 미니 배치 사이즈 크기
+    parameters: 미리 학습 및 초기화 파라미
+    """
+    costs = []
+    m = X.shape[1]
+
+    if parameters is None:
+        parameters = initialize_parameters(vocab_size, emb_size) # 파라미터를 우선 만듦
+
+    for epoch in range(epochs):
+        epoch_cost = 0 # 에폭 별 비용
+        batch_inds = list(range(0, m, batch_size))
+        np.random.shuffle(batch_inds)
+        for i in batch_inds: # 배치크기에 따라 학습 데이터 잘라준다
+            X_batch = X[:, i:i + batch_size]
+            Y_batch = Y[:, i:i + batch_size]
+
+            softmax_out, caches = forward_propagation(X_batch, parameters) #순전파 후 소프트맥스 함수에 넣을 것과 캐쉬
+            gradients = backward_propagation(Y_batch, softmax_out, caches) # y 배치값 소프트맥수 함수 캐시를 가지고 그라디언트 계산
+            update_parameters(parameters, caches, gradients, learning_rate) # 파라미터와 캐시 그라디언트 학습률로 파라미터 업데이트
+            cost = cross_entropy(softmax_out, Y_batch) # 크로스 엔트로피를 사용해서 비용 계산
+            epoch_cost += np.squeeze(cost) # 에폭 별 비용에 누적 합산
+
+        costs.append(epoch_cost) # 에폭 비용을 총 비용에 추가
+        if print_cost and epoch % (epochs // 500) == 0:
+            print("Cost after epoch {}: {}".format(epoch, epoch_cost))
+        if epoch % (epochs // 100) == 0:
+            learning_rate *= 0.98 # 학습률을 낮춰줆
+
+    if plot_cost: # 그림그려주는 부분
+        plt.plot(np.arange(epochs), costs)
+        plt.xlabel('# of epochs')
+        plt.ylabel('cost')
+    return parameters
