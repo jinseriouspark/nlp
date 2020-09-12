@@ -1,27 +1,33 @@
+
 # 출처 : https://towardsdatascience.com/word2vec-from-scratch-with-numpy-8786ddd49e72
 
 import numpy as np
 import re
+from datetime import datetime
+#imp다ort matplotlib.pyplot as plt
+
 
 def tokenize(text): # 단어를 토큰화
     pattern = re.compile(r'[A-Za-z]+[\w^\']*|[\w^\'*[A-Za-z]+[\w^\']*')
     return pattern.findall(text.lower()) # 모든 단어 소문자화
 
 def mapping(tokens):
-    word_to_id = dict()
-    id_to_word = dict()
+    word_to_id = dict() # 단어를 id 로 바꿔 담아둘 딕셔너리
+    id_to_word = dict() # id 를 다시 단어로 복원할 때 담아둘 딕셔너리
 
     for i, token in enumerate(set(tokens)):
-        word_to_id[token] = i
-        id_to_word[i] = token
+        word_to_id[token] = i # 신규 단어가 들어왔다면 그때의 id 를 넣어줌
+        id_to_word[i] = token # 동시에 id to word 딕셔너리에도 값을 넣어준다
 
     return word_to_id, id_to_word
 
 def generate_training_data(tokens, word_to_id, window_size):
-    N = len(tokens)
+    N = len(tokens) # 토큰 길이만큼 n 만들어준다
     X, Y= [], []
+    # 학습에 쓸 x 와 결과 y 를 담을 리스트를 만들어준다
+    # 스킵그램을 만들 것이므로 x 에는 단어 1개 y 에는 단어 x 단어 주변 window_size 만큼의 단어를 넣어줄 것
 
-    for i in range(N): # 토큰의 길이만큼 반복
+    for i in range(N): # 토큰의 길이만큼 반복, 이떄는 우선 숫자로 바꾸어 가져와야 할 인덱스를 가져온
         print(i)
         nbr_inds = list(range(max(0, i - window_size), i)) + \
             list (range(i + 1, min(N, i + window_size + 1)))
@@ -69,18 +75,18 @@ def initialize_dense(input_size, output_size):
     W = np.random.randn(output_size, input_size) * 0.01
     return W
 
-def initalize_parameters(vocab_size, emb_size):
+def initialize_parameters(vocab_size, emb_size):
     """
     :param vocab_size: 파라미터 학습에 필요한 단어 크기
     :param emb_size: 파라미터 학습에 필요한 임베딩 사이즈 크기
     :return: 파라미터
     """
     wrd_emb = initialize_wrd_emb(vocab_size, emb_size)
-    W = initialize_dense(emb_size, vocab_size)
+    w = initialize_dense(emb_size, vocab_size)
 
     parameters = {} # 파라미터를 받을 사전 하나 준비
     parameters['wrd_emb'] = wrd_emb # 사전에는 워드 임베딩 정보와
-    parameters['W'] = W # 가중치 정보를 넣어둠
+    parameters['w'] = w # 가중치 정보를 넣어둠
     return parameters
 
 # 방법
@@ -119,7 +125,7 @@ def softmax(z):
     :param z: dense layer 의 결과물 vocab_size , m 으로 구성
     :return:
     """
-    softmax_out = np.divide(np.exp(z), np.sum(np.exp(x), axis = 0, keepdims = True) + 0.001)
+    softmax_out = np.divide(np.exp(z), np.sum(np.exp(z), axis = 0, keepdims = True) + 0.001)
     return softmax_out
 
 def forward_propagation(inds, parameters):
@@ -235,8 +241,26 @@ def skipgram_model_training(X, Y, vocab_size, emb_size, learning_rate, epochs, b
         if epoch % (epochs // 100) == 0:
             learning_rate *= 0.98 # 학습률을 낮춰줆
 
-    if plot_cost: # 그림그려주는 부분
-        plt.plot(np.arange(epochs), costs)
-        plt.xlabel('# of epochs')
-        plt.ylabel('cost')
+#    if plot_cost: # 그림그려주는 부분
+#        plt.plot(np.arange(epochs), costs)
+#        plt.xlabel('# of epochs')
+#        plt.ylabel('cost')
     return parameters
+
+# 평가하기
+# 데이터를 모델에 학습시킨 이후엔 그 결과물을 평가해야 한다
+# 우선 우리는 window size = 3, 5000번의 학습을 하였고
+# 각 단어의 주변 단어들을 확인할 수 있다
+
+paras = skipgram_model_training(X, Y_one_hot, vocab_size, 50, 0.05, 5000, batch_size = 128, parameters = None, print_cost = True)
+
+X_test = np.arange(vocab_size)
+X_test = np.expand_dims(X_test, axis = 0)
+softmax_test, _ = forward_propagation(X_test, paras)
+top_sorted_inds = np.argsort(softmax_test, axis = 0)[-4:, :]
+
+print(doc)
+for input_ind in range(vocab_size):
+    input_word = id_to_word[input_ind]
+    output_words = [id_to_word[output_ind] for output_ind in top_sorted_inds[::-1, input_ind] ]
+    print("{}'s 주변단어 : {}".format(input_word, output_words))
