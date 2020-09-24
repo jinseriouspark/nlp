@@ -259,7 +259,7 @@ X_test = np.expand_dims(X_test, axis = 0)
 softmax_test, _ = forward_propagation(X_test, paras)
 top_sorted_inds = np.argsort(softmax_test, axis = 0)[-4:, :]
 
-print(doc)
+
 for input_ind in range(vocab_size):
     input_word = id_to_word[input_ind]
     output_words = [id_to_word[output_ind] for output_ind in top_sorted_inds[::-1, input_ind] ]
